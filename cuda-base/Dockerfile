@@ -27,9 +27,15 @@ RUN groupadd -g 1000 euler && \
     echo "euler ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # ── System packages ───────────────────────────────────────────────────────────
+# Two-step: first enable the universe repo (needed for libsuitesparse-dev,
+# python3-pip, etc.), then install everything else in one layer.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        sudo \
+        software-properties-common \
+        lsb-release && \
+    add-apt-repository universe && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
         build-essential \
         curl \
         wget \
@@ -37,8 +43,6 @@ RUN apt-get update && \
         unzip \
         flex \
         libsuitesparse-dev \
-        lsb-release \
-        software-properties-common \
         gnupg \
         libcurl4-openssl-dev \
         libzstd-dev \
