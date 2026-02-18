@@ -43,7 +43,6 @@ RUN apt-get update && \
         libcurl4-openssl-dev \
         libzstd-dev \
         python3-pip \
-        # MPI — required to build HYPRE, SUNDIALS, SuperLU with MPI support
         libopenmpi-dev \
         openmpi-bin && \
     rm -rf /var/lib/apt/lists/*
