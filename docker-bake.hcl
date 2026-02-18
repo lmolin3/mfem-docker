@@ -41,7 +41,7 @@ variable "NUM_JOBS" {
 # ── Library versions (single source of truth) ─────────────────────────────────
 # Change a version here and it propagates to every affected image automatically.
 variable "LLVM_VERSION"    { default = "18" }
-variable "CUDA_VERSION"    { default = "13.0" }
+variable "CUDA_VERSION"    { default = "13.1.1" }
 variable "HYPRE_VERSION"   { default = "2.31.0" }
 variable "SUPERLU_VERSION" { default = "8.2.1" }
 variable "GSLIB_VERSION"   { default = "1.0.9" }

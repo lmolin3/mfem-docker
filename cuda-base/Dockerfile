@@ -13,7 +13,7 @@
 #                --build-arg CUDA_VERSION=13.0 .
 # =============================================================================
 
-ARG CUDA_VERSION=13.0
+ARG CUDA_VERSION=13.1.1
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 ARG LLVM_VERSION=18
