@@ -22,13 +22,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "containers/**"
   pull_request:
     branches:
       - main
-    paths:
-      - "containers/**"
   workflow_dispatch:  # allows manual trigger from the Actions tab
 
 permissions:
@@ -64,7 +60,7 @@ jobs:
       - name: Build (and push on main)
         uses: docker/bake-action@v5
         with:
-          workdir: containers
+          workdir: .
           targets: ${{ matrix.target }}
           push: ${{ github.event_name != 'pull_request' }}
           set: |
@@ -99,7 +95,7 @@ jobs:
       - name: Build (and push on main)
         uses: docker/bake-action@v5
         with:
-          workdir: containers
+          workdir: .
           targets: ${{ matrix.target }}
           push: ${{ github.event_name != 'pull_request' }}
           set: |
@@ -134,7 +130,7 @@ jobs:
       - name: Build (and push on main)
         uses: docker/bake-action@v5
         with:
-          workdir: containers
+          workdir: .
           targets: gpu-tpls-sm${{ matrix.sm }}
           push: ${{ github.event_name != 'pull_request' }}
           set: |
