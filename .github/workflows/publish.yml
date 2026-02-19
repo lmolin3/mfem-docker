@@ -147,3 +147,29 @@ jobs:
           set: |
             *.cache-from=type=gha,scope=gpu-tpls-sm${{ matrix.sm }}
             *.cache-to=type=gha,mode=max,scope=gpu-tpls-sm${{ matrix.sm }}
+
+  # ── Stage 3: Cleanup old package versions ───────────────────────────────────
+  cleanup:
+    needs: [bases, cpu, gpu]
+    if: github.event_name != 'pull_request' && !failure() && !cancelled()
+    name: Cleanup ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package:
+          - toolchain
+          - cuda-base
+          - cpu-tpls
+          - cpu-tpls-debug
+          - gpu-tpls-sm80
+          - gpu-tpls-sm90
+          - gpu-tpls-sm120
+    steps:
+      - name: Delete old versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ matrix.package }}
+          package-type: container
+          min-versions-to-keep: 1
+          delete-only-untagged-versions: false
+          token: ${{ secrets.GITHUB_TOKEN }}
