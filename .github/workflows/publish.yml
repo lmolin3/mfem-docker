@@ -166,10 +166,26 @@ jobs:
           - gpu-tpls-sm120
     steps:
       - name: Delete old versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: ${{ matrix.package }}
-          package-type: container
-          min-versions-to-keep: 1
-          delete-only-untagged-versions: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          PACKAGE="${{ matrix.package }}"
+
+          OWNER_TYPE=$(gh api "/users/${OWNER}" --jq '.type')
+          if [ "$OWNER_TYPE" = "Organization" ]; then
+            BASE="/orgs/${OWNER}/packages/container/${PACKAGE}"
+          else
+            BASE="/user/packages/container/${PACKAGE}"
+          fi
+
+          IDS=$(gh api "${BASE}/versions" \
+            --jq 'sort_by(.created_at) | reverse | .[1:][].id' 2>/dev/null) \
+            || { echo "Package ${PACKAGE} not found, skipping."; exit 0; }
+
+          [ -z "$IDS" ] && { echo "No old versions to delete for ${PACKAGE}."; exit 0; }
+
+          for id in $IDS; do
+            gh api --method DELETE "${BASE}/versions/${id}"
+            echo "Deleted version ${id} of ${PACKAGE}."
+          done
