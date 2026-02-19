@@ -1,54 +1,74 @@
-# =============================================================================
-# publish.yml — Build and push Docker images on merge to main
-# =============================================================================
-# Triggered when a PR is merged into main (push event on main branch).
-# Uses docker/bake-action which wraps docker buildx bake.
-#
-# Permissions:
-#   contents: read   — checkout the repo
-#   packages: write  — push to ghcr.io/lmolin3/mfem-docker
-#
-# Build order:
-#   Stage 1: bases (toolchain + cuda-base) — must complete before stage 2
-#   Stage 2: cpu + gpu (parallel)
-#
-# Images are only pushed when running on main. PRs perform a build-only
-# dry run (no push) so contributors can verify their changes build correctly.
-# =============================================================================
-
 name: Publish images
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - 'docker-bake.hcl'
+      - 'toolchain/**'
+      - 'cuda-base/**'
+      - 'cpu-tpls/**'
+      - 'cpu-tpls-debug/**'
+      - 'gpu-tpls/**'
+      - '.github/workflows/publish.yml'
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:  # allows manual trigger from the Actions tab
+    branches: [main]
+    paths:
+      - 'docker-bake.hcl'
+      - 'toolchain/**'
+      - 'cuda-base/**'
+      - 'cpu-tpls/**'
+      - 'cpu-tpls-debug/**'
+      - 'gpu-tpls/**'
+      - '.github/workflows/publish.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  # ── Stage 1: foundation layers ─────────────────────────────────────────────
+  # ── Detect which components changed ─────────────────────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      bases: ${{ steps.filter.outputs.bases }}
+      cpu:   ${{ steps.filter.outputs.cpu }}
+      gpu:   ${{ steps.filter.outputs.gpu }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            bases:
+              - 'docker-bake.hcl'
+              - 'toolchain/**'
+              - 'cuda-base/**'
+              - '.github/workflows/publish.yml'
+            cpu:
+              - 'docker-bake.hcl'
+              - 'toolchain/**'
+              - 'cpu-tpls/**'
+              - 'cpu-tpls-debug/**'
+            gpu:
+              - 'docker-bake.hcl'
+              - 'cuda-base/**'
+              - 'gpu-tpls/**'
+
+  # ── Stage 1: foundation layers ──────────────────────────────────────────────
   bases:
+    needs: changes
+    if: needs.changes.outputs.bases == 'true' || github.event_name == 'workflow_dispatch'
     name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: true
       matrix:
         target: [toolchain, cuda-base]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -56,7 +76,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build (and push on main)
         uses: docker/bake-action@v5
         with:
@@ -69,21 +88,18 @@ jobs:
 
   # ── Stage 2: CPU images ─────────────────────────────────────────────────────
   cpu:
+    needs: [changes, bases]
+    if: |
+      (needs.changes.outputs.cpu == 'true' || github.event_name == 'workflow_dispatch') &&
+      !failure() && !cancelled()
     name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
-    needs: bases
-
     strategy:
       matrix:
         target: [cpu-tpls, cpu-tpls-debug]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -91,7 +107,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build (and push on main)
         uses: docker/bake-action@v5
         with:
@@ -104,21 +119,18 @@ jobs:
 
   # ── Stage 2: GPU images ─────────────────────────────────────────────────────
   gpu:
+    needs: [changes, bases]
+    if: |
+      (needs.changes.outputs.gpu == 'true' || github.event_name == 'workflow_dispatch') &&
+      !failure() && !cancelled()
     name: Build gpu-tpls-sm${{ matrix.sm }}
     runs-on: ubuntu-latest
-    needs: bases
-
     strategy:
       matrix:
         sm: ["80", "90", "120"]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -126,7 +138,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build (and push on main)
         uses: docker/bake-action@v5
         with:
