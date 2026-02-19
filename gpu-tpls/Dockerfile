@@ -11,7 +11,7 @@
 #   SUNDIALS  -DCMAKE_CUDA_ARCHITECTURES=${cuda_arch_sm}
 #
 # Libraries included:
-#   HYPRE (CUDA) · SuperLU_DIST · HDF5 · GSLIB · SUNDIALS (CUDA) · NetCDF · Valgrind
+#   HYPRE (CUDA) · SuperLU_DIST · HDF5 · GSLIB · SUNDIALS (CUDA) · NetCDF · Enzyme · Valgrind
 #
 # Build (via Bake — preferred):
 #   docker buildx bake --file ../docker-bake.hcl gpu-tpls-sm90
@@ -24,7 +24,7 @@
 #                --build-arg num_jobs=40 .
 # =============================================================================
 
-ARG CUDA_BASE_IMAGE=ghcr.io/lmolin3/mfem-docker/cuda-base:13.0
+ARG CUDA_BASE_IMAGE=ghcr.io/lmolin3/mfem-docker/cuda-base:13.1.1
 FROM ${CUDA_BASE_IMAGE}
 
 ARG num_jobs=8
@@ -41,21 +41,30 @@ USER root
 WORKDIR /opt/archives
 
 # ── HYPRE (with CUDA support) ─────────────────────────────────────────────────
-# --with-gpu-arch takes the raw SM number (e.g. 90), not the "sm_" prefix.
+# Uses HYPRE's CMake build (supported since 2.28) instead of autoconf so that
+# CMAKE_CUDA_STANDARD=17 is honoured natively. This avoids patching the
+# autoconf-generated Makefile.config, which hardcodes -std=c++11 — incompatible
+# with CUDA 13.x CCCL's hard C++17 requirement.
+# HYPRE_ENABLE_CUDA is the correct CMake flag (autotools equivalent: --with-cuda).
+# BUILD_SHARED_LIBS is the standard CMake variable (HYPRE_BUILD_SHARED_LIBS is unused).
+# CMAKE_CUDA_ARCHITECTURES takes the raw SM integer (e.g. "100").
 RUN curl -fsSL https://github.com/hypre-space/hypre/archive/refs/tags/v${hypre_version}.tar.gz \
         -o hypre.tar.gz && \
     tar xzf hypre.tar.gz && rm hypre.tar.gz && \
-    cd hypre-${hypre_version}/src && \
-    ./configure \
-        --prefix=/opt/hypre-${hypre_version} \
-        --enable-shared \
-        --disable-static \
-        --with-cuda \
-        --with-gpu-arch=${cuda_arch_sm} \
-        --with-cuda-home=/usr/local/cuda \
-        CC=clang CXX=clang++ && \
+    mkdir hypre-build && cd hypre-build && \
+    cmake ../hypre-${hypre_version}/src \
+        -DCMAKE_INSTALL_PREFIX=/opt/hypre-${hypre_version} \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DHYPRE_ENABLE_CUDA=ON \
+        -DCMAKE_CUDA_ARCHITECTURES=${cuda_arch_sm} \
+        -DCMAKE_CUDA_STANDARD=17 \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DHYPRE_ENABLE_CUSPARSE=ON \
+        -DCMAKE_C_COMPILER=mpicc \
+        -DCMAKE_CXX_COMPILER=mpicxx && \
     make -j ${num_jobs} && make install && \
-    cd /opt/archives && rm -rf hypre-${hypre_version}
+    cd /opt/archives && rm -rf hypre-${hypre_version} hypre-build
 
 # ── SuperLU_DIST (CPU; called by HYPRE/SUNDIALS for sparse factorization) ─────
 RUN curl -fsSL https://codeload.github.com/xiaoyeli/superlu_dist/tar.gz/refs/tags/v${superlu_version} \
@@ -137,6 +146,18 @@ RUN curl -fsSL https://github.com/Unidata/netcdf-c/archive/refs/tags/v${netcdf_v
     ./configure --prefix=${NCDIR} && \
     make -j ${num_jobs} && make install && \
     cd /opt/archives && rm -rf netcdf-c-${netcdf_version}
+
+# ── Enzyme (AD plugin for LLVM) ───────────────────────────────────────────────
+RUN git clone https://github.com/EnzymeAD/Enzyme.git && \
+    cd Enzyme/enzyme && \
+    mkdir build && cd build && \
+    CC=clang CXX=clang++ cmake .. \
+        -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake \
+        -DCMAKE_INSTALL_PREFIX=/usr/local/enzyme \
+        -DLLVM_EXTERNAL_LIT=/usr/local/bin/lit \
+        -DENZYME_ENABLE_PLUGINS=ON && \
+    make -j ${num_jobs} && make install && \
+    cd /opt/archives && rm -rf Enzyme
 
 # ── Valgrind ──────────────────────────────────────────────────────────────────
 # Useful for host-side memory analysis. Does not profile CUDA kernels.

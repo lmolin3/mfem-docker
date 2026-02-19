@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2023, Lawrence Livermore National Security, LLC. Produced
+# Copyright (c) 2010-2025, Lawrence Livermore National Security, LLC. Produced
 # at the Lawrence Livermore National Laboratory. All Rights reserved. See files
 # LICENSE and NOTICE for details. LLNL-CODE-806117.
 #
@@ -44,8 +44,10 @@ option(MFEM_USE_MUMPS "Enable MUMPS usage" OFF)
 option(MFEM_USE_STRUMPACK "Enable STRUMPACK usage" OFF)
 option(MFEM_USE_GINKGO "Enable Ginkgo usage" OFF)
 option(MFEM_USE_AMGX "Enable AmgX usage" OFF)
+option(MFEM_USE_MAGMA "Enable MAGMA usage" OFF)
 option(MFEM_USE_GNUTLS "Enable GNUTLS usage" OFF)
 option(MFEM_USE_GSLIB "Enable GSLIB usage" ON)
+option(MFEM_USE_HDF5 "Enable HDF5 usage" OFF)
 option(MFEM_USE_NETCDF "Enable NETCDF usage" ON)
 option(MFEM_USE_PETSC "Enable PETSc support." OFF)
 option(MFEM_USE_SLEPC "Enable SLEPc support." OFF)
@@ -66,11 +68,13 @@ option(MFEM_USE_ADIOS2 "Enable ADIOS2" OFF)
 option(MFEM_USE_CALIPER "Enable Caliper support" OFF)
 option(MFEM_USE_ALGOIM "Enable Algoim support" OFF)
 option(MFEM_USE_MKL_CPARDISO "Enable MKL CPardiso" OFF)
+option(MFEM_USE_MKL_PARDISO "Enable MKL Pardiso" OFF)
 option(MFEM_USE_ADFORWARD "Enable forward mode for AD" OFF)
 option(MFEM_USE_CODIPACK "Enable automatic differentiation (AD) using CoDiPack" OFF)
 option(MFEM_USE_BENCHMARK "Enable Google Benchmark" OFF)
 option(MFEM_USE_PARELAG "Enable ParELAG" OFF)
-option(MFEM_USE_ENZYME "Enable Enzyme" OFF)
+option(MFEM_USE_TRIBOL "Enable Tribol" OFF)
+option(MFEM_USE_ENZYME "Enable Enzyme" ON)
 
 # Optional overrides for autodetected MPIEXEC and MPIEXEC_NUMPROC_FLAG
 # set(MFEM_MPIEXEC "mpirun" CACHE STRING "Command for running MPI tests")
@@ -87,7 +91,14 @@ set(MFEM_MPI_NP 4 CACHE STRING "Number of processes used for MPI tests")
 option(MFEM_ENABLE_TESTING "Enable the ctest framework for testing" ON)
 option(MFEM_ENABLE_EXAMPLES "Build all of the examples" ON)
 option(MFEM_ENABLE_MINIAPPS "Build all of the miniapps" ON)
-option(MFEM_ENABLE_GOOGLE_BENCHMARKS "Build all of the Google benchmarks" OFF)
+option(MFEM_ENABLE_BENCHMARKS "Build all of the benchmarks" OFF)
+
+# Allow a user to specify fetching of certain third-party libraries instead of
+# searching for existing installations.
+option(MFEM_FETCH_TPLS "Enable fetching of all supported third-party libraries" OFF)
+option(MFEM_FETCH_GSLIB "Enable fetching of GSLIB" OFF)
+option(MFEM_FETCH_HYPRE "Enable fetching of hypre" OFF)
+option(MFEM_FETCH_METIS "Enable fetching of METIS" OFF)
 
 # Setting CXX/MPICXX on the command line or in user.cmake will overwrite the
 # autodetected C++ compiler.
@@ -189,6 +200,10 @@ set(Ginkgo_DIR "${MFEM_DIR}/../ginkgo" CACHE PATH "Path to the Ginkgo library.")
 
 set(AMGX_DIR "${MFEM_DIR}/../amgx" CACHE PATH "Path to AmgX")
 
+set(MAGMA_DIR "${MFEM_DIR}/../magma" CACHE PATH "Path to MAGMA")
+set(MAGMA_REQUIRED_PACKAGES "BLAS" "LAPACK" CACHE STRING
+    "Additional packages required by MAGMA.")
+
 set(GNUTLS_DIR "" CACHE PATH "Path to the GnuTLS library.")
 
 set(GSLIB_DIR "/opt/archives/gslib-1.0.9/build" CACHE PATH "Path to the GSLIB library.")
@@ -233,6 +248,7 @@ set(HIOP_REQUIRED_PACKAGES "BLAS" "LAPACK" CACHE STRING
     "Packages that HiOp depends on.")
 
 set(MKL_CPARDISO_DIR "" CACHE STRING "MKL installation path.")
+set(MKL_PARDISO_DIR "" CACHE STRING "MKL Pardiso installation path.")
 set(MKL_MPI_WRAPPER_LIB "mkl_blacs_mpich_lp64" CACHE STRING "MKL MPI wrapper library")
 set(MKL_LIBRARY_DIR "" CACHE STRING "Custom library subdirectory")
 
@@ -256,6 +272,12 @@ set(PARELAG_INCLUDE_DIRS "${PARELAG_DIR}/src;${PARELAG_DIR}/build/src" CACHE
     STRING "Path to ParELAG headers.")
 set(PARELAG_LIBRARIES "${PARELAG_DIR}/build/src/libParELAG.a" CACHE STRING
     "The ParELAG library.")
+
+set(TRIBOL_DIR "${MFEM_DIR}/../tribol" CACHE PATH "Path to Tribol")
+set(Tribol_REQUIRED_PACKAGES "MPI" "MFEM" CACHE STRING
+    "Packages that Tribol depends on.")
+
+set(ENZYME_DIR "/usr/local/enzyme" CACHE PATH "Path to Enzyme")
 
 set(BLAS_INCLUDE_DIRS "/usr/include/x86_64-linux-gnu" CACHE STRING "Path to BLAS headers.")
 set(BLAS_LIBRARIES "/usr/lib/x86_64-linux-gnu/libopenblas.so" CACHE STRING "The BLAS library.")

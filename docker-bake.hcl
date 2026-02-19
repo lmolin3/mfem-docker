@@ -11,7 +11,7 @@
 #
 # Then build CPU or GPU images:
 #   docker buildx bake cpu
-#   docker buildx bake gpu
+#   docker buildx bake gpu          # builds sm_90 (Hopper H100/H200) by default
 #
 # Build everything:
 #   docker buildx bake all
@@ -26,6 +26,18 @@
 # NOTE: Build order matters for cross-image dependencies.
 # Stage 1 (bases) must be pushed to the registry before Stage 2 (cpu/gpu)
 # can pull them as FROM base images. See README.md for CI pipeline guidance.
+#
+# GPU ARCHITECTURE NOTE
+# ---------------------
+# The `gpu` group builds sm_90 (Hopper H100/H200) only by default to avoid
+# exhausting builder resources with parallel CUDA compilations (each arch can take
+# 30+ minutes and several GB of RAM). To build a specific architecture, reference
+# its named target directly:
+#   docker buildx bake gpu-tpls-sm80    # Ampere   A100
+#   docker buildx bake gpu-tpls-sm90    # Hopper   H100/H200  (same as `gpu`)
+#   docker buildx bake gpu-tpls-sm120   # Blackwell RTX (Pro 6000 / RTX 50xx)
+# To build all architectures: docker buildx bake gpu-all
+# All three targets are always available regardless of the default group.
 # =============================================================================
 
 # ── Registry ──────────────────────────────────────────────────────────────────
@@ -142,9 +154,9 @@ target "cpu-tpls-debug" {
 # =============================================================================
 # STAGE 2 — GPU images (require cuda-base in registry)
 # Matrix expands to one named target per CUDA architecture:
+#   gpu-tpls-sm80   → sm_80  Ampere   (A100)
 #   gpu-tpls-sm90   → sm_90  Hopper   (H100, H200)
-#   gpu-tpls-sm100  → sm_100 Blackwell (B100, B200)
-#   gpu-tpls-sm120  → sm_120 Blackwell next-gen
+#   gpu-tpls-sm120  → sm_120 Blackwell RTX (Pro 6000, RTX 50xx)
 # =============================================================================
 
 target "gpu-tpls" {
@@ -152,8 +164,8 @@ target "gpu-tpls" {
 
   matrix = {
     item = [
+      { sm = "80"  },
       { sm = "90"  },
-      { sm = "100" },
       { sm = "120" },
     ]
   }
@@ -192,9 +204,20 @@ group "cpu" {
   targets = ["cpu-tpls", "cpu-tpls-debug"]
 }
 
-# All GPU architecture variants (runs in parallel)
+# Default GPU build — sm_90 (Hopper H100/H200) only.
+# Building all architectures in parallel exhausts builder resources.
+# To build a specific architecture use its named target:
+#   docker buildx bake gpu-tpls-sm80    # Ampere A100
+#   docker buildx bake gpu-tpls-sm120   # Blackwell RTX Pro 6000 / RTX 50xx
+# To build all architectures:
+#   docker buildx bake gpu-all
 group "gpu" {
-  targets = ["gpu-tpls-sm90", "gpu-tpls-sm100", "gpu-tpls-sm120"]
+  targets = ["gpu-tpls-sm90"]
+}
+
+# All GPU architectures (A100 + H100/H200 + Blackwell RTX)
+group "gpu-all" {
+  targets = ["gpu-tpls-sm80", "gpu-tpls-sm90", "gpu-tpls-sm120"]
 }
 
 # Everything

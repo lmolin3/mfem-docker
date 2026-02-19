@@ -37,6 +37,8 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
+        cmake \
+        gcc \
         curl \
         wget \
         git \
@@ -48,7 +50,10 @@ RUN apt-get update && \
         libzstd-dev \
         python3-pip \
         libopenmpi-dev \
-        openmpi-bin && \
+        openmpi-bin \
+        gfortran \
+        libmetis-dev \
+        libparmetis-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # ── CLANG / LLVM ──────────────────────────────────────────────────────────────

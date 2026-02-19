@@ -7,7 +7,7 @@
 # set faults when loading meshes via NetCDF.
 #
 # Differences from cpu-tpls:
-#   - No Enzyme (AD not useful for memory debugging)
+#   - No Enzyme debug flags (Enzyme is a compiler plugin; built optimized regardless)
 #   - PETSc replaces standalone HDF5 (PETSc downloads HDF5 internally)
 #   - SUNDIALS links against PETSc
 #   - All libraries compiled with -O0 -g -mno-avx512f
@@ -44,7 +44,7 @@ RUN curl -fsSL https://github.com/hypre-space/hypre/archive/refs/tags/v${hypre_v
         --prefix=/opt/hypre-${hypre_version} \
         --enable-shared \
         --disable-static \
-        CC=clang CXX=clang++ && \
+        CC=mpicc CXX=mpicxx && \
     make -j ${num_jobs} && make install && \
     cd /opt/archives && rm -rf hypre-${hypre_version}
 
@@ -149,6 +149,18 @@ RUN curl -fsSL https://github.com/Unidata/netcdf-c/archive/refs/tags/v${netcdf_v
     ./configure --prefix=${NCDIR} && \
     make -j ${num_jobs} && make install && \
     cd /opt/archives && rm -rf netcdf-c-${netcdf_version}
+
+# ── Enzyme (AD plugin for LLVM) ───────────────────────────────────────────────
+RUN git clone https://github.com/EnzymeAD/Enzyme.git && \
+    cd Enzyme/enzyme && \
+    mkdir build && cd build && \
+    CC=clang CXX=clang++ cmake .. \
+        -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake \
+        -DCMAKE_INSTALL_PREFIX=/usr/local/enzyme \
+        -DLLVM_EXTERNAL_LIT=/usr/local/bin/lit \
+        -DENZYME_ENABLE_PLUGINS=ON && \
+    make -j ${num_jobs} && make install && \
+    cd /opt/archives && rm -rf Enzyme
 
 # ── Valgrind ──────────────────────────────────────────────────────────────────
 # NOTE: ${num_jobs} — original had typo ${njobs}. Fixed.

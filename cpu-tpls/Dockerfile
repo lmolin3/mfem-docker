@@ -41,7 +41,7 @@ RUN curl -fsSL https://github.com/hypre-space/hypre/archive/refs/tags/v${hypre_v
         --prefix=/opt/hypre-${hypre_version} \
         --enable-shared \
         --disable-static \
-        CC=clang CXX=clang++ && \
+        CC=mpicc CXX=mpicxx && \
     make -j ${num_jobs} && make install && \
     cd /opt/archives && rm -rf hypre-${hypre_version}
 
@@ -124,12 +124,11 @@ RUN curl -fsSL https://github.com/Unidata/netcdf-c/archive/refs/tags/v${netcdf_v
 RUN git clone https://github.com/EnzymeAD/Enzyme.git && \
     cd Enzyme/enzyme && \
     mkdir build && cd build && \
-    cmake .. \
+    CC=clang CXX=clang++ cmake .. \
         -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake \
         -DCMAKE_INSTALL_PREFIX=/usr/local/enzyme \
         -DLLVM_EXTERNAL_LIT=/usr/local/bin/lit \
-        -DENZYME_ENABLE_PLUGINS=ON \
-        CC=clang CXX=clang++ && \
+        -DENZYME_ENABLE_PLUGINS=ON && \
     make -j ${num_jobs} && make install && \
     cd /opt/archives && rm -rf Enzyme
 
