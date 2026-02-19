@@ -110,7 +110,7 @@ jobs:
 
     strategy:
       matrix:
-        sm: ["90", "100", "120"]
+        sm: ["80", "90", "120"]
 
     steps:
       - name: Checkout
