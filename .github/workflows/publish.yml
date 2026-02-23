@@ -180,7 +180,7 @@ jobs:
           fi
 
           IDS=$(gh api "${BASE}/versions" \
-            --jq 'sort_by(.created_at) | reverse | .[1:][].id' 2>/dev/null) \
+            --jq 'sort_by(.created_at) | reverse | .[3:][].id' 2>/dev/null) \
             || { echo "Package ${PACKAGE} not found, skipping."; exit 0; }
 
           [ -z "$IDS" ] && { echo "No old versions to delete for ${PACKAGE}."; exit 0; }
