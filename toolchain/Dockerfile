@@ -44,7 +44,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ── Add user euler with passwordless sudo ──
-RUN useradd -m -s /bin/bash euler && \
+RUN id -u euler >/dev/null 2>&1 || useradd -m -s /bin/bash euler && \
     echo 'euler ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/euler && \
     chmod 0440 /etc/sudoers.d/euler
 
