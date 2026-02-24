@@ -25,6 +25,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         sudo \
         build-essential \
+        vim \ 
         cmake \
         gcc \
         curl \
@@ -38,8 +39,14 @@ RUN apt-get update && \
         gnupg \
         libcurl4-openssl-dev \
         libzstd-dev \
+        libopenblas-dev \
         python3-pip && \
     rm -rf /var/lib/apt/lists/*
+
+# ── Add user euler with passwordless sudo ──
+RUN useradd -m -s /bin/bash euler && \
+    echo 'euler ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/euler && \
+    chmod 0440 /etc/sudoers.d/euler
 
 # ── CLANG / LLVM ──────────────────────────────────────────────────────────────
 RUN curl -sSL https://apt.llvm.org/llvm.sh | bash -s -- ${LLVM_VERSION} && \

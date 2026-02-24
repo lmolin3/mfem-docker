@@ -37,6 +37,7 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
+        vim \
         cmake \
         gcc \
         curl \
@@ -48,6 +49,7 @@ RUN apt-get update && \
         gnupg \
         libcurl4-openssl-dev \
         libzstd-dev \
+        libopenblas-dev \
         python3-pip \
         libopenmpi-dev \
         openmpi-bin \
