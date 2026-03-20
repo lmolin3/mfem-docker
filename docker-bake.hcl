@@ -27,16 +27,17 @@ variable "NUM_JOBS" {
 }
 
 # ── Library versions ──────────────────────────────────────────────────────────
-variable "LLVM_VERSION"    { default = "18" }
-variable "CUDA_VERSION"    { default = "13.1.1" }
-variable "HYPRE_VERSION"   { default = "2.31.0" }
-variable "SUPERLU_VERSION" { default = "8.2.1" }
-variable "GSLIB_VERSION"   { default = "1.0.9" }
-variable "SUNDIALS_VERSION"{ default = "6.6.1" }
-variable "HDF5_VERSION"    { default = "1.14.5" }
-variable "NETCDF_VERSION"  { default = "4.9.2" }
-variable "VALGRIND_VERSION"{ default = "3.22.0" }
-variable "PETSC_VERSION"   { default = "3.21.4" }
+variable "LLVM_VERSION"         { default = "18" }
+variable "CUDA_VERSION"         { default = "13.1.1" }
+variable "HYPRE_VERSION"        { default = "2.31.0" }
+variable "SUPERLU_VERSION"      { default = "8.2.1" }
+variable "GSLIB_VERSION"        { default = "1.0.9" }
+variable "SUNDIALS_VERSION"     { default = "6.6.1" }
+variable "HDF5_VERSION"         { default = "1.14.5" }
+variable "NETCDF_VERSION"       { default = "4.9.2" }
+variable "VALGRIND_VERSION"     { default = "3.22.0" }
+variable "PETSC_VERSION"        { default = "3.21.4" }
+variable "CODE_SERVER_VERSION"  { default = "4.100.0" }
 
 # ── Base images ───────────────────────────────────────────────────────────────
 target "toolchain" {
@@ -107,6 +108,19 @@ target "cpu-tpls-debug" {
   platforms = ["linux/amd64"]
 }
 
+target "cpu-tpls-vscode" {
+  context    = "./cpu-tpls-vscode"
+  dockerfile = "Dockerfile"
+  args = {
+    CPU_TPLS_IMAGE      = "${REGISTRY}/cpu-tpls:latest"
+    CODE_SERVER_VERSION = CODE_SERVER_VERSION
+  }
+  tags = [
+    "${REGISTRY}/cpu-tpls:vscode",
+  ]
+  platforms = ["linux/amd64"]
+}
+
 # ── GPU images (sm80=A100  sm90=H100/H200  sm120=Blackwell RTX) ───────────────
 target "gpu-tpls" {
   name = "gpu-tpls-sm${item.sm}"
@@ -141,7 +155,7 @@ target "gpu-tpls" {
 
 # ── Groups ────────────────────────────────────────────────────────────────────
 group "bases"   { targets = ["toolchain", "cuda-base"] }
-group "cpu"     { targets = ["cpu-tpls", "cpu-tpls-debug"] }
+group "cpu"     { targets = ["cpu-tpls", "cpu-tpls-debug", "cpu-tpls-vscode"] }
 group "gpu"     { targets = ["gpu-tpls-sm90"] }
 group "gpu-all" { targets = ["gpu-tpls-sm80", "gpu-tpls-sm90", "gpu-tpls-sm120"] }
 group "all"     { targets = ["bases", "cpu", "gpu"] }
