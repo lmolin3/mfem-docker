@@ -26,6 +26,11 @@ ARG CODE_SERVER_VERSION=4.100.0
 
 USER root
 
+# ── Fix HOME for euler user ───────────────────────────────────────────────────
+RUN usermod -d /home/euler euler && \
+    mkdir -p /home/euler && \
+    chown euler:euler /home/euler
+
 # ── System dependencies ───────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
         supervisor \
@@ -58,6 +63,7 @@ RUN touch /var/log/code-server.log \
 
 # ── GLVis JS dependencies and clone (as euler) ────────────────────────────────
 USER euler
+ENV HOME=/home/euler
 WORKDIR /home/euler
 
 RUN curl -L https://github.com/aaugustin/websockets/archive/refs/tags/10.3.tar.gz \
