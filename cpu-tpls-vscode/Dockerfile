@@ -1,8 +1,8 @@
 # =============================================================================
-# cpu-tpls-vscode — CPU TPLs image with VS Code Server (code-server) + GLVis
+# cpu-tpls-vscode — CPU TPLs image with VS Code Server (code-server)
 # =============================================================================
-# Extends cpu-tpls:latest with a browser-accessible VS Code server and
-# GLVis JS for in-browser visualization of MFEM simulations.
+# Extends cpu-tpls:latest with a browser-accessible VS Code server so
+# developers can edit and build MFEM entirely in the browser.
 #
 # Build (via Bake — preferred):
 #   docker buildx bake --file ../docker-bake.hcl cpu-tpls-vscode
@@ -12,12 +12,11 @@
 #
 # Run:
 #   docker run --cap-add=SYS_PTRACE --rm -it \
-#     -p 8080:8080 -p 8000:8000 -p 3000:3000 \
+#     -p 8080:8080 \
 #     -v mfem:/home/euler/mfem \
 #     ghcr.io/lmolin3/mfem-docker/cpu-tpls:vscode
 #
 #   VS Code : http://localhost:8080  (password: mfem)
-#   GLVis   : http://localhost:8000
 # =============================================================================
 ARG CPU_TPLS_IMAGE=ghcr.io/lmolin3/mfem-docker/cpu-tpls:latest
 FROM ${CPU_TPLS_IMAGE}
@@ -33,7 +32,6 @@ RUN usermod -d /home/euler euler && \
 
 # ── System dependencies ───────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        supervisor \
         libarchive-tools \
     && rm -rf /var/lib/apt/lists/*
 
@@ -53,20 +51,11 @@ cert: false
 EOF
 RUN chown -R euler:euler /home/euler/.config
 
-# ── Log files for supervisord ─────────────────────────────────────────────────
-RUN touch /var/log/code-server.log \
-          /var/log/glvis-js-webserver.log \
-          /var/log/glvis-browser-server.log && \
-    chown euler:euler /var/log/code-server.log \
-                      /var/log/glvis-js-webserver.log \
-                      /var/log/glvis-browser-server.log
-
-# ── GLVis JS dependencies, clangd extension, and clone (as euler) ─────────────
+# ── Install clangd extension ──────────────────────────────────────────────────
 USER euler
 ENV HOME=/home/euler
 WORKDIR /home/euler
 
-# Install clangd extension for code-server
 RUN mkdir -p ${HOME}/.local/share/code-server/extensions && \
     cd ${HOME}/.local/share/code-server/extensions && \
     curl -L https://openvsxorg.blob.core.windows.net/resources/llvm-vs-code-extensions/vscode-clangd/0.1.21/llvm-vs-code-extensions.vscode-clangd-0.1.21.vsix > clangd.vsix && \
@@ -74,22 +63,7 @@ RUN mkdir -p ${HOME}/.local/share/code-server/extensions && \
     mv extension llvm-vs-code-extensions.vscode-clangd-0.1.21 && \
     rm clangd.vsix
 
-# Install websockets for GLVis browser server
-RUN curl -L https://github.com/aaugustin/websockets/archive/refs/tags/10.3.tar.gz \
-        -o websockets-10.3.tar.gz && \
-    tar xzf websockets-10.3.tar.gz && \
-    cd websockets-10.3 && \
-    pip install --user . && \
-    cd .. && rm -rf websockets-10.3 websockets-10.3.tar.gz
+EXPOSE 8080
 
-# Clone GLVis JS
-RUN git lfs install && \
-    git clone --depth=1 https://github.com/GLVis/glvis-js.git
-
-# ── supervisord configuration ─────────────────────────────────────────────────
-USER root
-ADD supervisord.conf /etc/supervisord.conf
-
-EXPOSE 8080 8000 3000
-
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+ENTRYPOINT ["code-server", "--config", "/home/euler/.config/code-server/config.yaml"]
+CMD ["."]
