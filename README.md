@@ -13,6 +13,7 @@ Docker images for MFEM development at Emory (ECM2 group). Each image provides a 
 |---|---|---|
 | `cpu-tpls:latest` | CPU development | HYPRE · SuperLU · GSLIB · SUNDIALS · HDF5 · NetCDF · Enzyme · Valgrind |
 | `cpu-tpls:debug` | Memory debugging | Same + PETSc, debug flags, no AVX-512 |
+| `cpu-tpls:vscode` | Browser-based IDE (CPU) | Same as `cpu-tpls:latest` + VS Code Server (code-server) on port 8080 |
 | `gpu-tpls:sm80` | GPU / A100 | HYPRE+CUDA · SuperLU · GSLIB · SUNDIALS+CUDA · HDF5 · NetCDF · Valgrind |
 | `gpu-tpls:sm90` | GPU / H100, H200 | same |
 | `gpu-tpls:sm120` | GPU / Blackwell RTX | same |
@@ -45,6 +46,28 @@ NUM_JOBS=20 docker buildx bake gpu --load
 
 ---
 
+## VS Code Server (`cpu-tpls:vscode`)
+
+The `cpu-tpls:vscode` image extends `cpu-tpls:latest` with [code-server](https://github.com/coder/code-server), giving you a full browser-based VS Code IDE with all CPU TPLs pre-installed.
+
+```bash
+docker run --rm -it -p 8080:8080 \
+  -v /path/to/mfem:/home/euler/mfem \
+  ghcr.io/lmolin3/mfem-docker/cpu-tpls:vscode
+```
+
+Then open **http://localhost:8080** in your browser. The default password is `mfem`.
+
+To set a custom password:
+```bash
+docker run --rm -it -p 8080:8080 \
+  -e PASSWORD=mysecretpassword \
+  -v /path/to/mfem:/home/euler/mfem \
+  ghcr.io/lmolin3/mfem-docker/cpu-tpls:vscode
+```
+
+---
+
 ## Compiling MFEM inside a container
 
 The `cmake_config/` directory has pre-filled cmake presets. Pass one with `-C`:
@@ -53,6 +76,7 @@ The `cmake_config/` directory has pre-filled cmake presets. Pass one with `-C`:
 |---|---|
 | `cpu-tpls:latest` | `cmake_config/user-parallel-cpu.cmake` |
 | `cpu-tpls:debug` | `cmake_config/user-debug-valgrind.cmake` |
+| `cpu-tpls:vscode` | `cmake_config/user-parallel-cpu.cmake` |
 | `gpu-tpls:sm80` | `cmake_config/user-parallel-gpu-sm80.cmake` |
 | `gpu-tpls:sm90` | `cmake_config/user-parallel-gpu-sm90.cmake` |
 | `gpu-tpls:sm120` | `cmake_config/user-parallel-gpu-sm120.cmake` |
