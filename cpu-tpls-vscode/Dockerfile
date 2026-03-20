@@ -61,11 +61,20 @@ RUN touch /var/log/code-server.log \
                       /var/log/glvis-js-webserver.log \
                       /var/log/glvis-browser-server.log
 
-# ── GLVis JS dependencies and clone (as euler) ────────────────────────────────
+# ── GLVis JS dependencies, clangd extension, and clone (as euler) ─────────────
 USER euler
 ENV HOME=/home/euler
 WORKDIR /home/euler
 
+# Install clangd extension for code-server
+RUN mkdir -p ${HOME}/.local/share/code-server/extensions && \
+    cd ${HOME}/.local/share/code-server/extensions && \
+    curl -L https://openvsxorg.blob.core.windows.net/resources/llvm-vs-code-extensions/vscode-clangd/0.1.21/llvm-vs-code-extensions.vscode-clangd-0.1.21.vsix > clangd.vsix && \
+    bsdtar -xvf clangd.vsix extension && \
+    mv extension llvm-vs-code-extensions.vscode-clangd-0.1.21 && \
+    rm clangd.vsix
+
+# Install websockets for GLVis browser server
 RUN curl -L https://github.com/aaugustin/websockets/archive/refs/tags/10.3.tar.gz \
         -o websockets-10.3.tar.gz && \
     tar xzf websockets-10.3.tar.gz && \
@@ -73,6 +82,7 @@ RUN curl -L https://github.com/aaugustin/websockets/archive/refs/tags/10.3.tar.g
     pip install --user . && \
     cd .. && rm -rf websockets-10.3 websockets-10.3.tar.gz
 
+# Clone GLVis JS
 RUN git lfs install && \
     git clone --depth=1 https://github.com/GLVis/glvis-js.git
 
