@@ -65,6 +65,8 @@ RUN mkdir -p ${HOME}/.local/share/code-server/extensions && \
 
     
 # ── Pre-configure CMake ───────────────────────────────────────────────────────
+USER root 
+
 # Create the directory and the file while we are still root to ensure paths exist
 RUN mkdir -p /home/euler/cmake-config
 
