@@ -63,6 +63,40 @@ RUN mkdir -p ${HOME}/.local/share/code-server/extensions && \
     mv extension llvm-vs-code-extensions.vscode-clangd-0.1.21 && \
     rm clangd.vsix
 
+    
+# ── Pre-configure CMake ───────────────────────────────────────────────────────
+# Create the directory and the file while we are still root to ensure paths exist
+RUN mkdir -p /home/euler/cmake-config
+
+# Copy your local file into the image
+# (Ensure user-parallel.cmake is in the same directory as your Dockerfile)
+COPY user-parallel.cmake /home/euler/cmake-config/user-parallel.cmake
+
+# Fix permissions so the euler user can read/write to it
+RUN chown -R euler:euler /home/euler/cmake-config
+
+
+# ── Setup Tutorial Source and Build ──────────────────────────────────────────
+USER euler
+WORKDIR /home/euler
+
+# Clone and checkout specific branch
+RUN git clone https://github.com/lmolin3/Cardiac-Ablation-ECM2.git /home/euler/source && \
+    cd /home/euler/source && \
+    git checkout mfem-tutorial-emory
+
+# Create build directory
+RUN mkdir -p /home/euler/build
+
+# Configure with your custom CMake file
+WORKDIR /home/euler/build
+RUN cmake ../source -DUSER_CONFIG=../cmake-config/user-parallel.cmake
+
+# Compile examples (using 20 cores as requested)
+# Note: Ensure the build machine has enough RAM for -j 20!
+RUN cd examples && make -j 20
+
+
 EXPOSE 8080
 
 ENTRYPOINT ["code-server", "--config", "/home/euler/.config/code-server/config.yaml"]
