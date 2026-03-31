@@ -119,9 +119,42 @@ jobs:
             *.cache-to=type=gha,mode=max,scope=cuda-base
             *.platform=linux/amd64
 
-  # ── Stage 2: CPU images (multi-platform: amd64 + arm64) ─────────────────────
-  cpu:
+  # ── Stage 2a: cpu-tpls (base, must build first) ──────────────────────────────
+  cpu-tpls:
     needs: [changes, toolchain]
+    if: |
+      (needs.changes.outputs.cpu == 'true' || github.event_name == 'workflow_dispatch') &&
+      !failure() && !cancelled()
+    name: Build cpu-tpls
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build (and push on main)
+        uses: docker/bake-action@v5
+        with:
+          workdir: .
+          targets: cpu-tpls
+          push: ${{ github.event_name != 'pull_request' }}
+          set: |
+            *.cache-from=type=gha,scope=cpu-tpls-amd64
+            *.cache-from=type=gha,scope=cpu-tpls-arm64
+            *.cache-to=type=gha,mode=max,scope=cpu-tpls-amd64
+            *.platform=linux/amd64,linux/arm64
+
+  # ── Stage 2b: cpu-tpls-debug and cpu-tpls-vscode (depend on cpu-tpls) ────────
+  cpu-tpls-variants:
+    needs: [changes, cpu-tpls]
     if: |
       (needs.changes.outputs.cpu == 'true' || github.event_name == 'workflow_dispatch') &&
       !failure() && !cancelled()
@@ -129,7 +162,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [cpu-tpls, cpu-tpls-debug, cpu-tpls-vscode]
+        target: [cpu-tpls-debug, cpu-tpls-vscode]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -155,7 +188,7 @@ jobs:
             *.cache-to=type=gha,mode=max,scope=${{ matrix.target }}-amd64
             *.platform=linux/amd64,linux/arm64
 
-  # ── Stage 2: GPU images (amd64 only — CUDA is x86) ──────────────────────────
+  # ── Stage 2c: GPU images (amd64 only — CUDA is x86) ─────────────────────────
   gpu:
     needs: [changes, cuda-base]
     if: |
@@ -189,7 +222,7 @@ jobs:
 
   # ── Stage 3: Cleanup old package versions ───────────────────────────────────
   cleanup:
-    needs: [toolchain, cuda-base, cpu, gpu]
+    needs: [toolchain, cuda-base, cpu-tpls, cpu-tpls-variants, gpu]
     if: github.event_name != 'pull_request' && !failure() && !cancelled()
     name: Cleanup ${{ matrix.package }}
     runs-on: ubuntu-latest
