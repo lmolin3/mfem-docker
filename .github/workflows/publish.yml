@@ -54,10 +54,12 @@ jobs:
               - 'cpu-tpls/**'
               - 'cpu-tpls-debug/**'
               - 'cpu-tpls-vscode/**'
+              - '.github/workflows/publish.yml'
             gpu:
               - 'docker-bake.hcl'
               - 'cuda-base/**'
               - 'gpu-tpls/**'
+              - '.github/workflows/publish.yml'
 
   # ── Stage 1a: toolchain (multi-platform: amd64 + arm64) ─────────────────────
   toolchain:
